@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -12,13 +13,15 @@ import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
+    ConfigModule.forRoot({ isGlobal: true }), // Carga .env automáticamente
     TypeOrmModule.forRoot({
       type: 'postgres',
-      host: 'localhost',
-      port: 5432,
-      username: 'gymAdmin',
-      password: 'gympass7979',
-      database: 'gymdatabase',
+      // host: 'localhost',
+      // port: 5432,
+      // username: 'gymAdmin',
+      // password: 'gympass7979',
+      // database: 'gymdatabase',
+      url: process.env.DATABASE_URL,
       autoLoadEntities: true,
       synchronize: true, // Crear tablas automáticamente (solo desarrollo)
     }),
