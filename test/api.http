@@ -1,0 +1,299 @@
+### ============================================
+### GYM MANAGEMENT API - REST Client Tests
+### Extensión: REST Client (humao.rest-client)
+### ============================================
+
+### Variables de entorno
+@baseUrl = http://localhost:3000
+@contentType = application/json
+
+### ============================================
+### MIEMBROS
+### ============================================
+
+### Listar todos los miembros
+GET {{baseUrl}}/miembros
+
+###
+
+### Listar solo miembros activos
+GET {{baseUrl}}/miembros?activo=true
+
+###
+
+### Buscar miembros por nombre/cedula
+GET {{baseUrl}}/miembros/buscar?q=Alisson
+
+###
+
+### Listar miembros con membresía y deudas (OPTIMIZADO - una sola petición)
+GET {{baseUrl}}/miembros/lista
+
+###
+
+### Obtener miembro por ID
+GET {{baseUrl}}/miembros/1
+
+###
+
+### Obtener miembro completo (con membresía y deudas)
+GET {{baseUrl}}/miembros/1/completo
+
+###
+
+### Crear nuevo miembro (sin membresía)
+POST {{baseUrl}}/miembros
+Content-Type: {{contentType}}
+
+{
+  "nombre": "Juan",
+  "apellido": "Pérez",
+  "cedula": "1234567890",
+  "email": "juan@example.com",
+  "telefono": "0999999999",
+  "genero": "M",
+  "direccion": "Calle Principal 123"
+}
+
+###
+
+### Crear miembro CON membresía (pago completo)
+POST {{baseUrl}}/miembros
+Content-Type: {{contentType}}
+
+{
+  "nombre": "María",
+  "apellido": "García",
+  "cedula": "0987654321",
+  "email": "maria@example.com",
+  "telefono": "0988888888",
+  "genero": "F",
+  "planId": 1,
+  "montoPagado": 50.00,
+  "precioPlan": 50.00
+}
+
+###
+
+### Crear miembro CON deuda (pago parcial)
+POST {{baseUrl}}/miembros
+Content-Type: {{contentType}}
+
+{
+  "nombre": "Carlos",
+  "apellido": "López",
+  "cedula": "1122334455",
+  "email": "carlos@example.com",
+  "telefono": "0977777777",
+  "genero": "M",
+  "planId": 1,
+  "montoPagado": 30.00,
+  "precioPlan": 50.00
+}
+
+###
+
+### Actualizar miembro
+PUT {{baseUrl}}/miembros/1
+Content-Type: {{contentType}}
+
+{
+  "telefono": "0911111121",
+  "email": "nuevo.email@example.com",
+  "notas": "Actualizado via REST Client",
+  "fechaNacimiento": "2005-11-15"
+}
+
+###
+
+### Desactivar miembro (soft delete)
+DELETE {{baseUrl}}/miembros/1
+
+###
+
+### ============================================
+### PLANES
+### ============================================
+
+### Listar todos los planes
+GET {{baseUrl}}/planes
+
+###
+
+### Obtener plan por ID
+GET {{baseUrl}}/planes/1
+
+###
+
+### ============================================
+### MEMBRESÍAS
+### ============================================
+
+### Listar todas las membresías
+GET {{baseUrl}}/membresias
+
+###
+
+### Listar membresías activas
+GET {{baseUrl}}/membresias/activas
+
+###
+
+### Membresías por vencer (próximos 7 días)
+GET {{baseUrl}}/membresias/por-vencer
+
+###
+
+### Membresías vencidas
+GET {{baseUrl}}/membresias/vencidas
+
+###
+
+### Obtener membresía por ID
+GET {{baseUrl}}/membresias/1
+
+###
+
+### Obtener membresías de un miembro específico
+GET {{baseUrl}}/membresias/miembro/1
+
+###
+
+### Crear/Asignar membresía a miembro existente
+POST {{baseUrl}}/membresias
+Content-Type: {{contentType}}
+
+{
+  "miembroId": 1,
+  "planId": 8,
+  "precioPagado": 20.00,
+  "mesesPagados": 1
+}
+
+###
+
+### Renovar membresía (3 meses)
+POST {{baseUrl}}/membresias
+Content-Type: {{contentType}}
+
+{
+  "miembroId": 1,
+  "planId": 8,
+  "precioPagado": 22,
+  "mesesPagados": 1
+}
+
+###
+
+### ============================================
+### DEUDAS
+### ============================================
+
+### Listar todas las deudas
+GET {{baseUrl}}/deudas
+
+###
+
+### Listar deudas pendientes
+GET {{baseUrl}}/deudas/pendientes
+
+###
+
+### Listar miembros con deudas (morosos)
+GET {{baseUrl}}/deudas/miembros-con-deudas
+
+###
+
+### Deudas de un miembro específico
+GET {{baseUrl}}/deudas/miembro/1
+
+###
+
+### Obtener deuda por ID
+GET {{baseUrl}}/deudas/1
+
+###
+
+### ============================================
+### PAGOS
+### ============================================
+
+### Listar todos los pagos
+GET {{baseUrl}}/pagos
+
+###
+
+### Resumen de pagos del mes actual
+GET {{baseUrl}}/pagos/resumen-mes
+
+###
+
+### Pagos agrupados por método de pago
+GET {{baseUrl}}/pagos/por-metodo
+
+###
+
+### Pagos de un miembro específico
+GET {{baseUrl}}/pagos/miembro/1
+
+###
+
+### ============================================
+### ASISTENCIAS
+### ============================================
+
+### Listar todas las asistencias
+GET {{baseUrl}}/asistencias
+
+###
+
+### Asistencias del día actual
+GET {{baseUrl}}/asistencias/hoy
+
+###
+
+### Miembros actualmente en el gym
+GET {{baseUrl}}/asistencias/en-gym
+
+###
+
+### Estadísticas por día de la semana
+GET {{baseUrl}}/asistencias/estadisticas-dia
+
+###
+
+### Check-in de miembro (entrada)
+POST {{baseUrl}}/asistencias/check-in/1
+
+###
+
+### Check-out de miembro (salida)
+POST {{baseUrl}}/asistencias/check-out/1
+
+###
+
+### ============================================
+### DASHBOARD
+### ============================================
+
+### Resumen general del gym
+GET {{baseUrl}}/dashboard/resumen
+
+###
+
+### Top 5 miembros más frecuentes
+GET {{baseUrl}}/dashboard/top-miembros
+
+###
+
+### Ingresos agrupados por plan
+GET {{baseUrl}}/dashboard/ingresos-por-plan
+
+###
+
+### ============================================
+### HEALTH CHECK
+### ============================================
+
+### Verificar que el servidor está corriendo
+GET {{baseUrl}}
