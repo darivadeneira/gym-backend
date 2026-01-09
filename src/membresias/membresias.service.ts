@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between, LessThan } from 'typeorm';
 import { Membresia } from './entities/membresia.entity';
@@ -20,7 +20,7 @@ export class MembresiasService {
     private planesRepository: Repository<Plan>,
     @InjectRepository(Miembro)
     private miembrosRepository: Repository<Miembro>,
-  ) {}
+  ) { }
 
   findAll(): Promise<Membresia[]> {
     return this.membresiasRepository.find({
@@ -66,6 +66,11 @@ export class MembresiasService {
       })
       .orderBy('mem.fechaFin', 'ASC')
       .getMany();
+
+    // Si está vacio devolver mensaje de error
+    if (membresias.length === 0) {
+      throw new NotFoundException('No hay membresías por vencer');
+    }
 
     return membresias.map((mem) => ({
       id: mem.miembro.id,
@@ -129,7 +134,7 @@ export class MembresiasService {
     const membresiasActivas = await this.membresiasRepository.find({
       where: { miembroId: data.miembroId, estado: 'activa' }
     });
-    
+
     if (membresiasActivas.length > 0) {
       for (const mem of membresiasActivas) {
         mem.estado = 'cancelada';
@@ -142,7 +147,7 @@ export class MembresiasService {
     if (!plan) {
       throw new Error('Plan no encontrado');
     }
-    
+
     const miembro = await this.miembrosRepository.findOne({ where: { id: data.miembroId } });
     if (!miembro) {
       throw new Error('Miembro no encontrado');
@@ -221,6 +226,20 @@ export class MembresiasService {
     });
   }
 
+  // Obtener última membresía de un miembro (activa o vencida)
+  async findUltimaByMiembro(miembroId: number): Promise<Membresia | null> {
+    // Primero buscar activa
+    const activa = await this.findActivaByMiembro(miembroId);
+    if (activa) return activa;
+
+    // Si no hay activa, buscar la más reciente (vencida o cancelada)
+    return this.membresiasRepository.findOne({
+      where: { miembroId },
+      relations: ['plan'],
+      order: { fechaFin: 'DESC' },
+    });
+  }
+
   // UPDATE - Actualizar membresía manualmente
   async update(id: number, data: Partial<Membresia>): Promise<Membresia> {
     const membresia = await this.findOne(id);
@@ -235,7 +254,7 @@ export class MembresiasService {
     // Si cambió el precio pagado, actualizar el pago existente o registrar ajuste
     if (data.precioPagado !== undefined) {
       const newPrecioPagado = Number(data.precioPagado);
-      
+
       // Buscar pago asociado a esta membresía
       const pagoExistente = await this.pagosRepository.findOne({
         where: { membresiaId: membresia.id },
@@ -250,15 +269,15 @@ export class MembresiasService {
         // Si no existe, crear uno nuevo con la diferencia (o el total si no habia nada)
         const diff = newPrecioPagado - oldPrecioPagado;
         if (diff !== 0) {
-            const pago = this.pagosRepository.create({
-              miembroId: membresia.miembroId,
-              membresiaId: membresia.id,
-              monto: diff,
-              metodoPago: 'efectivo',
-              concepto: `Ajuste Membresía ${membresia.id}`,
-              fechaPago: new Date()
-            });
-            await this.pagosRepository.save(pago);
+          const pago = this.pagosRepository.create({
+            miembroId: membresia.miembroId,
+            membresiaId: membresia.id,
+            monto: diff,
+            metodoPago: 'efectivo',
+            concepto: `Ajuste Membresía ${membresia.id}`,
+            fechaPago: new Date()
+          });
+          await this.pagosRepository.save(pago);
         }
       }
     }

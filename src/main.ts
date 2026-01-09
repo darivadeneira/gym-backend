@@ -18,9 +18,10 @@ async function bootstrap() {
 
   // Habilitar CORS para permitir peticiones desde el frontend
   app.enableCors({
-    origin: '*', // En producción, especificar los dominios permitidos
+    origin: true, // Permite cualquier origen (refleja el origen de la petición)
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
   });
 
   // Puerto 3001 para no conflicto con el servicio de reconocimiento facial (3000)

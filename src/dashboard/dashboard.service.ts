@@ -20,7 +20,7 @@ export class DashboardService {
     private deudasRepository: Repository<Deuda>,
     @InjectRepository(Asistencia)
     private asistenciasRepository: Repository<Asistencia>,
-  ) {}
+  ) { }
 
   // Query 13: Resumen general del gym
   async getResumenGeneral() {
@@ -91,6 +91,29 @@ export class DashboardService {
       cantidad_pagos: parseInt(r.cantidad_pagos) || 0,
       ingresos_totales: parseFloat(r.ingresos_totales) || 0,
     }));
+  }
+
+  // Query 16: Ingresos de los últimos 6 meses (para gráfico de barras)
+  async getIngresosUltimos6Meses(): Promise<{ mes: string; label: string; total: number }[]> {
+    const result = await this.pagosRepository
+      .createQueryBuilder('p')
+      .select("TO_CHAR(p.fecha_pago, 'YYYY-MM')", 'mes')
+      .addSelect('COALESCE(SUM(p.monto), 0)', 'total')
+      .where("p.fecha_pago >= CURRENT_DATE - INTERVAL '6 months'")
+      .groupBy("TO_CHAR(p.fecha_pago, 'YYYY-MM')")
+      .orderBy('mes', 'ASC')
+      .getRawMany();
+
+    const mesesNombres = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
+    return result.map((r) => {
+      const [year, month] = r.mes.split('-');
+      return {
+        mes: r.mes,
+        label: mesesNombres[parseInt(month) - 1],
+        total: parseFloat(r.total) || 0,
+      };
+    });
   }
 
   private async getIngresosMes(): Promise<number> {

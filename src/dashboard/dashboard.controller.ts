@@ -3,7 +3,7 @@ import { DashboardService } from './dashboard.service';
 
 @Controller('dashboard')
 export class DashboardController {
-  constructor(private readonly dashboardService: DashboardService) {}
+  constructor(private readonly dashboardService: DashboardService) { }
 
   @Get()
   getResumenGeneral() {
@@ -18,5 +18,10 @@ export class DashboardController {
   @Get('ingresos-por-plan')
   getIngresosPorPlan() {
     return this.dashboardService.getIngresosPorPlan();
+  }
+
+  @Get('ingresos-ultimos-meses')
+  getIngresosUltimos6Meses() {
+    return this.dashboardService.getIngresosUltimos6Meses();
   }
 }

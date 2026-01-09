@@ -17,7 +17,7 @@ export class MiembrosController {
     private readonly deudasService: DeudasService,
     @Inject(forwardRef(() => PlanesService))
     private readonly planesService: PlanesService,
-  ) {}
+  ) { }
 
   // POST /miembros - Crear nuevo miembro con membresía y posible deuda
   @Post()
@@ -31,7 +31,7 @@ export class MiembrosController {
     // 2. Si hay planId, crear membresía
     if (createMiembroDto.planId) {
       const plan = await this.planesService.findOne(createMiembroDto.planId);
-      
+
       if (plan) {
         const precioPlan = createMiembroDto.precioPlan ?? Number(plan.precio);
         const montoPagado = createMiembroDto.montoPagado ?? precioPlan;
@@ -49,7 +49,7 @@ export class MiembrosController {
         // 3. Si pagó menos del precio del plan, crear deuda
         if (montoPagado < precioPlan) {
           const montoDeuda = precioPlan - montoPagado;
-          
+
           const fechaVencimiento = new Date();
           fechaVencimiento.setDate(fechaVencimiento.getDate() + 30); // Vence en 30 días
 
@@ -66,7 +66,7 @@ export class MiembrosController {
 
     return {
       success: true,
-      message: deuda 
+      message: deuda
         ? `Miembro registrado con deuda de $${Number(deuda.montoPendiente).toFixed(2)}`
         : 'Miembro registrado exitosamente',
       data: {
@@ -90,42 +90,46 @@ export class MiembrosController {
   @Get('lista')
   async findAllWithDetails(): Promise<any[]> {
     const miembros = await this.miembrosService.findAllActive();
-    
+
     // Obtener todos los datos en paralelo para todos los miembros
     const miembrosConDetalles = await Promise.all(
       miembros.map(async (miembro) => {
-        const [membresiaActiva, deudas] = await Promise.all([
-          this.membresiasService.findActivaByMiembro(miembro.id),
+        const [ultimaMembresia, deudas] = await Promise.all([
+          this.membresiasService.findUltimaByMiembro(miembro.id),
           this.deudasService.findByMiembro(miembro.id),
         ]);
-        
+
         const deudasPendientes = deudas.filter(d => d.estado === 'pendiente' || d.estado === 'parcial');
-        
+
         // Calcular estado de membresía
         let alerta = 'SIN MEMBRESIA';
         let diasRestantes = 0;
-        
-        if (membresiaActiva && membresiaActiva.fechaFin) {
+
+        if (ultimaMembresia && ultimaMembresia.fechaFin) {
           const hoy = new Date();
-          const fechaFin = new Date(membresiaActiva.fechaFin);
-          diasRestantes = Math.ceil((fechaFin.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
-          
+          hoy.setHours(0, 0, 0, 0);
+          const fechaFin = new Date(ultimaMembresia.fechaFin);
+          fechaFin.setHours(0, 0, 0, 0);
+          diasRestantes = Math.floor((fechaFin.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
+
           if (diasRestantes < 0) {
             alerta = 'VENCIDA';
+          } else if (diasRestantes === 0) {
+            alerta = 'VENCE HOY';
           } else if (diasRestantes <= 7) {
             alerta = 'POR VENCER';
           } else {
             alerta = 'ACTIVA';
           }
         }
-        
+
         return {
           ...miembro,
           codigo_miembro: miembro.codigoMiembro || `GYM-${String(miembro.id).padStart(3, '0')}`,
-          plan_nombre: membresiaActiva?.plan?.nombre || null,
-          membresia_fecha_inicio: membresiaActiva?.fechaInicio || null,
-          membresia_fecha_fin: membresiaActiva?.fechaFin || null,
-          membresia_estado: membresiaActiva?.estado || null,
+          plan_nombre: ultimaMembresia?.plan?.nombre || null,
+          membresia_fecha_inicio: ultimaMembresia?.fechaInicio || null,
+          membresia_fecha_fin: ultimaMembresia?.fechaFin || null,
+          membresia_estado: ultimaMembresia?.estado || null,
           dias_restantes: diasRestantes,
           alerta,
           total_deuda: deudasPendientes.reduce((sum, d) => sum + Number(d.montoPendiente), 0),
@@ -133,7 +137,7 @@ export class MiembrosController {
         };
       })
     );
-    
+
     return miembrosConDetalles;
   }
 
@@ -164,7 +168,7 @@ export class MiembrosController {
       return { message: 'Miembro no encontrado' };
     }
 
-    const membresiaActiva = await this.membresiasService.findActivaByMiembro(+id);
+    const membresiaActiva = await this.membresiasService.findUltimaByMiembro(+id);
     const deudas = await this.deudasService.findByMiembro(+id);
     const deudasPendientes = deudas.filter(d => d.estado === 'pendiente' || d.estado === 'parcial');
 

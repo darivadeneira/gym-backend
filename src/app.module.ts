@@ -15,7 +15,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
   imports: [
     ConfigModule.forRoot({ isGlobal: true }), // Carga .env automáticamente
     TypeOrmModule.forRoot({
-      type: 'postgres',
+      // type: 'postgres',
       // host: 'localhost',
       // port: 5432,
       // username: 'gymAdmin',

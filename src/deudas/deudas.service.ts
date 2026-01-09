@@ -2,8 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { Deuda } from './entities/deuda.entity';
-
 import { Pago } from '../pagos/entities/pago.entity';
+import { Membresia } from '../membresias/entities/membresia.entity';
 
 @Injectable()
 export class DeudasService {
@@ -12,7 +12,9 @@ export class DeudasService {
     private deudasRepository: Repository<Deuda>,
     @InjectRepository(Pago)
     private pagosRepository: Repository<Pago>,
-  ) {}
+    @InjectRepository(Membresia)
+    private membresiasRepository: Repository<Membresia>,
+  ) { }
 
   findAll(): Promise<Deuda[]> {
     return this.deudasRepository.find({
@@ -111,7 +113,7 @@ export class DeudasService {
 
     deuda.montoPagado += monto;
     deuda.montoPendiente = deuda.montoTotal - deuda.montoPagado;
-    
+
     if (deuda.montoPendiente <= 0) {
       deuda.estado = 'pagada';
       deuda.montoPendiente = 0;
@@ -142,11 +144,11 @@ export class DeudasService {
     const oldMontoPagado = Number(deuda.montoPagado);
 
     Object.assign(deuda, data);
-    
+
     // Recalcular pendiente si cambiaron los montos
     if (data.montoTotal !== undefined || data.montoPagado !== undefined) {
       deuda.montoPendiente = Number(deuda.montoTotal) - Number(deuda.montoPagado);
-      
+
       if (deuda.montoPendiente <= 0) {
         deuda.estado = 'pagada';
         deuda.montoPendiente = 0;
@@ -158,7 +160,7 @@ export class DeudasService {
 
       // Lógica inteligente para actualizar Pagos
       const newMontoPagado = Number(deuda.montoPagado);
-      
+
       if (newMontoPagado !== oldMontoPagado) {
         // Buscar pagos con el mismo concepto, ordenados por fecha (más reciente primero)
         const pagosExistentes = await this.pagosRepository.find({
@@ -167,34 +169,46 @@ export class DeudasService {
         });
 
         if (pagosExistentes.length > 0) {
-             // Estrategia: Aplicar la diferencia al último pago registrado
-             // Esto permite "corregir" el último pago o acumular en él, evitando duplicados
-             const ultimoPago = pagosExistentes[0];
-             const diff = newMontoPagado - oldMontoPagado;
-             
-             // Actualizar monto
-             ultimoPago.monto = Number(ultimoPago.monto) + diff;
-             
-             // Evitar montos negativos (opcional, pero buena práctica)
-             if (ultimoPago.monto < 0) ultimoPago.monto = 0; 
-             
-             await this.pagosRepository.save(ultimoPago);
+          // Estrategia: Aplicar la diferencia al último pago registrado
+          // Esto permite "corregir" el último pago o acumular en él, evitando duplicados
+          const ultimoPago = pagosExistentes[0];
+          const diff = newMontoPagado - oldMontoPagado;
+
+          // Actualizar monto
+          ultimoPago.monto = Number(ultimoPago.monto) + diff;
+
+          // Evitar montos negativos (opcional, pero buena práctica)
+          if (ultimoPago.monto < 0) ultimoPago.monto = 0;
+
+          await this.pagosRepository.save(ultimoPago);
         } else {
-             // Si no hay pagos previos, creamos uno nuevo con la diferencia
-             // (o con el total si partimos de cero)
-             // Nota: Si oldMontoPagado > 0 pero no hay pagos, hay inconsistencia previa.
-             // Asumimos que el usuario quiere registrar el "nuevo" valor visible.
-             const diff = newMontoPagado - oldMontoPagado;
-             if (diff > 0) {
-                const pago = this.pagosRepository.create({
-                  miembroId: deuda.miembroId,
-                  monto: diff,
-                  metodoPago: 'efectivo', 
-                  concepto: `Ajuste/Abono: ${deuda.concepto}`,
-                  fechaPago: new Date()
-                });
-                await this.pagosRepository.save(pago);
-             }
+          // Si no hay pagos previos, creamos uno nuevo con la diferencia
+          // (o con el total si partimos de cero)
+          // Nota: Si oldMontoPagado > 0 pero no hay pagos, hay inconsistencia previa.
+          // Asumimos que el usuario quiere registrar el "nuevo" valor visible.
+          const diff = newMontoPagado - oldMontoPagado;
+          if (diff > 0) {
+            const pago = this.pagosRepository.create({
+              miembroId: deuda.miembroId,
+              monto: diff,
+              metodoPago: 'efectivo',
+              concepto: `Ajuste/Abono: ${deuda.concepto}`,
+              fechaPago: new Date()
+            });
+            await this.pagosRepository.save(pago);
+          }
+        }
+      }
+
+      // Sincronizar precioPagado en la membresía si la deuda es de membresía
+      if (deuda.concepto.includes('Membresía')) {
+        const membresia = await this.membresiasRepository.findOne({
+          where: { miembroId: deuda.miembroId, estado: 'activa' }
+        });
+
+        if (membresia) {
+          membresia.precioPagado = Number(deuda.montoPagado);
+          await this.membresiasRepository.save(membresia);
         }
       }
     }
