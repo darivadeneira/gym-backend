@@ -15,15 +15,11 @@ import { DashboardModule } from './dashboard/dashboard.module';
   imports: [
     ConfigModule.forRoot({ isGlobal: true }), // Carga .env automáticamente
     TypeOrmModule.forRoot({
-      // type: 'postgres',
-      // host: 'localhost',
-      // port: 5432,
-      // username: 'gymAdmin',
-      // password: 'gympass7979',
-      // database: 'gymdatabase',
+      type: 'postgres', // REQUERIDO: TypeORM necesita saber el driver
       url: process.env.DATABASE_URL,
       autoLoadEntities: true,
       synchronize: true, // Crear tablas automáticamente (solo desarrollo)
+      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
     }),
     MiembrosModule,
     PlanesModule,
@@ -36,4 +32,4 @@ import { DashboardModule } from './dashboard/dashboard.module';
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule { }
