@@ -241,15 +241,50 @@ export class MembresiasService {
   }
 
   // UPDATE - Actualizar membresía manualmente
-  async update(id: number, data: Partial<Membresia>): Promise<Membresia> {
+  // Lógica de fechas:
+  // - Si se cambia mesesPagados: permite cambiar fechaInicio y fechaFin manualmente
+  // - Si NO se cambia mesesPagados: solo permite cambiar fechaInicio y fechaFin se recalcula
+  async update(id: number, data: Partial<Membresia> & {
+    mesesPagadosChanged?: boolean;
+    newMesesPagados?: number;
+  }): Promise<Membresia> {
     const membresia = await this.findOne(id);
     if (!membresia) {
       throw new Error('Membresía no encontrada');
     }
 
     const oldPrecioPagado = Number(membresia.precioPagado);
+    const oldFechaInicio = new Date(membresia.fechaInicio);
+    const oldFechaFin = new Date(membresia.fechaFin);
 
-    Object.assign(membresia, data);
+    // Calcular la duración original en días
+    const originalDurationMs = oldFechaFin.getTime() - oldFechaInicio.getTime();
+
+    // Manejar lógica de fechas
+    if (data.mesesPagadosChanged && data.newMesesPagados !== undefined) {
+      // Si se cambiaron los meses pagados, permitir ambas fechas manuales
+      if (data.fechaInicio) {
+        membresia.fechaInicio = new Date(data.fechaInicio);
+      }
+      if (data.fechaFin) {
+        membresia.fechaFin = new Date(data.fechaFin);
+      }
+      membresia.mesesPagados = data.newMesesPagados;
+    } else if (data.fechaInicio) {
+      // Si solo se cambia fechaInicio (sin cambiar meses), recalcular fechaFin
+      const newFechaInicio = new Date(data.fechaInicio);
+      membresia.fechaInicio = newFechaInicio;
+      // Mantener la misma duración original
+      membresia.fechaFin = new Date(newFechaInicio.getTime() + originalDurationMs);
+    }
+
+    // Aplicar otros campos si existen
+    if (data.precioPagado !== undefined) {
+      membresia.precioPagado = data.precioPagado;
+    }
+    if (data.estado !== undefined) {
+      membresia.estado = data.estado;
+    }
 
     // Si cambió el precio pagado, actualizar el pago existente o registrar ajuste
     if (data.precioPagado !== undefined) {
