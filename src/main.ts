@@ -1,30 +1,28 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
-import * as express from 'express';
 import * as path from 'path';
+import * as fs from 'fs';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  // Aumentar límite del body parser para imágenes base64
-  app.use(express.json({ limit: '50mb' }));
-  app.use(express.urlencoded({ limit: '50mb', extended: true }));
+  app.use(require('express').json({ limit: '50mb' }));
+  app.use(require('express').urlencoded({ limit: '50mb', extended: true }));
 
-  // Servir archivos estáticos desde la carpeta uploads
-  app.useStaticAssets(path.join(process.cwd(), 'uploads'), {
-    prefix: '/uploads/',
-  });
+  const uploadPath = path.join(process.cwd(), 'uploads');
+  if (!fs.existsSync(uploadPath)) {
+    fs.mkdirSync(uploadPath);
+  }
 
-  // Habilitar CORS para permitir peticiones desde el frontend
+  app.useStaticAssets(uploadPath, { prefix: '/uploads/' });
+
   app.enableCors({
-    origin: true, // Permite cualquier origen (refleja el origen de la petición)
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    origin: true,
     credentials: true,
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
   });
 
-  // Puerto 3001 para no conflicto con el servicio de reconocimiento facial (3000)
-  await app.listen(process.env.PORT ?? 3000);
+  const port = process.env.PORT || 3000;
+  await app.listen(port);
 }
 bootstrap();
