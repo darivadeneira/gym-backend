@@ -4,6 +4,9 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import * as path from 'path';
 import * as fs from 'fs';
 
+// Configurar zona horaria Ecuador (UTC-5)
+process.env.TZ = 'America/Guayaquil';
+
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 

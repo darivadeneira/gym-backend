@@ -20,6 +20,10 @@ import { DashboardModule } from './dashboard/dashboard.module';
       autoLoadEntities: true,
       synchronize: true, // Crear tablas automáticamente (solo desarrollo)
       ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+      // Configuración de zona horaria Ecuador (UTC-5)
+      extra: {
+        timezone: 'America/Guayaquil',
+      },
     }),
     MiembrosModule,
     PlanesModule,
