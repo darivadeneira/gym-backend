@@ -36,8 +36,8 @@ export class MiembrosController {
         const precioPlan = createMiembroDto.precioPlan ?? Number(plan.precio);
         const montoPagado = createMiembroDto.montoPagado ?? precioPlan;
 
-        // Crear membresía
-        membresia = await this.membresiasService.create({
+        // Crear membresía (el servicio ya crea pago y deuda automáticamente)
+        const resultado = await this.membresiasService.create({
           miembroId: miembro.id,
           planId: plan.id,
           precioPagado: montoPagado,
@@ -46,21 +46,9 @@ export class MiembrosController {
           comprobanteUrl: createMiembroDto.comprobanteUrl,
         });
 
-        // 3. Si pagó menos del precio del plan, crear deuda
-        if (montoPagado < precioPlan) {
-          const montoDeuda = precioPlan - montoPagado;
-
-          const fechaVencimiento = new Date();
-          fechaVencimiento.setDate(fechaVencimiento.getDate() + 30); // Vence en 30 días
-
-          deuda = await this.deudasService.create({
-            miembroId: miembro.id,
-            montoTotal: montoDeuda,
-            montoPagado: 0,
-            concepto: `Saldo pendiente - ${plan.nombre}`,
-            fechaVencimiento,
-          });
-        }
+        // Extraer membresía y deuda de la respuesta del servicio
+        membresia = resultado.membresia;
+        deuda = resultado.deuda;
       }
     }
 
